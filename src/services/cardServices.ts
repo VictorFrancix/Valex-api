@@ -229,3 +229,13 @@ function validatePassword(password: string, passwordHash: string) {
         };
     }
 }
+
+export async function unlockCard(cardId: number, password: string) {
+    const cardData = await getCardData(cardId);
+
+    validatePassword(password, cardData.password);
+    checkExpired(cardData.expirationDate);
+    checkBlocked(cardData.isBlocked, true);
+
+    await cardRepository.update(cardId, { isBlocked: false });
+}

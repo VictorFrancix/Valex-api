@@ -16,6 +16,6 @@ export const activateCardSchema = joi.object({
         password: joi.string().length(4).pattern(/[0-9]{4}/).required()
 });
 
-export const blockCardSchema = joi.object({
+export const cardPasswordSchema = joi.object({
         password: joi.string().length(4).pattern(/[0-9]{4}/).required()
 });

@@ -25,6 +25,12 @@ cardRouter.get("/transactions/:cardId", cardController.getTransactions);
 
 cardRouter.patch(
     "/cards/:cardId/block",
-    validateSchema(cardSchema.blockCardSchema),
+    validateSchema(cardSchema.cardPasswordSchema),
     cardController.blockCard
+);
+
+cardRouter.patch(
+    "/cards/:cardId/unlock",
+    validateSchema(cardSchema.cardPasswordSchema),
+    cardController.unlockCard
 );
