@@ -28,7 +28,7 @@ export async function createCard(req: Request, res: Response) {
 
     const cvc = await cardServices.createCard(employeeData, cardData.type);
 
-    res.status(201).send(cvc);
+    res.status(201).send({cvc:cvc});
 }
 
 export async function activateCard(req: Request, res: Response) {
