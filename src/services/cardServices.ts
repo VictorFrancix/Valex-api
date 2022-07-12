@@ -3,10 +3,11 @@ import dayjs from "dayjs";
 import Cryptr from "cryptr";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
-import {number} from "joi";
 
 import * as cardRepository from "../repositories/cardRepository.js"
 import { Employee } from "../repositories/employeeRepository.js";
+import * as paymentRepository from "../repositories/paymentRepository.js";
+import * as rechargeRepository from "../repositories/rechargeRepository.js";
 
 dotenv.config();
 
@@ -128,8 +129,10 @@ function checkActivate(password: string | null, active: boolean) {
 function checkExpired(expirationDate: string) {
     const date = expirationDate.split("/");
     const formatDate = dayjs().set("date", 1)
-        .set("month", parseInt(date[0])).set("year", parseInt(date[1]))
+        .set("month", parseInt(date[0]))
+        .set("year", parseInt(date[1]))
         .format("DD/MM/YYYY");
+
     if (new Date() > new Date(formatDate)) {
         throw {
             type: "badRequest",
@@ -149,4 +152,47 @@ function validateCvc(cvcInserted: string, encryptedCvc: string) {
             message: "Invalid cvc",
         };
     }
+}
+
+export async function getTransactions(cardId: number) {
+    const cardData = await cardRepository.findById(cardId);
+
+    if (!cardData) {
+        throw {
+            type: "notFound",
+            message: "Card not found",
+        };
+    }
+
+    const payments = await paymentRepository.findByCardId(cardId);
+    const recharges = await rechargeRepository.findByCardId(cardId);
+
+    const balance = calculateBalance(payments, recharges);
+
+    const transactions = {
+        balance: balance,
+        transactions: payments,
+        recharges: recharges
+    };
+
+    return transactions;
+}
+
+function calculateBalance(
+    payments: paymentRepository.PaymentWithBusinessName[],
+    recharges: rechargeRepository.Recharge[]
+) {
+    let paymentsTotal = 0;
+    payments.forEach((payment) => {
+        paymentsTotal += payment.amount;
+    });
+
+    let rechargesTotal = 0;
+    recharges.forEach((recharge) => {
+        rechargesTotal += recharge.amount;
+    });
+
+    const balance = rechargesTotal - paymentsTotal;
+
+    return balance;
 }
