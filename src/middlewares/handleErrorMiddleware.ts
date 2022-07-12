@@ -7,17 +7,17 @@ export async function handleError(
     next: NextFunction
 ) {
     if (error.type === "badRequest"){
-        res.sendStatus(400)
+        res.status(400).send(error.message)
     }
     else if (error.type === "unauthorized") {
-        res.sendStatus(401);
+        res.status(401).send(error.message);
     } else if (error.type === "notFound") {
-        res.sendStatus(404);
+        res.status(404).send(error.message);
     } else if(error.type === "conflict") {
-        res.sendStatus(409);
+        res.status(409).send(error.message);
     } else if (error.type === "unprocessableEntity") {
-        res.sendStatus(422);
+        res.status(422).send(error.message);
     } else {
-        res.sendStatus(500);
+        res.status(500).send(error.message);
     }
 }
