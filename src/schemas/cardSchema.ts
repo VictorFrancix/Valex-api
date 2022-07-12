@@ -4,7 +4,7 @@ export const createCardSchema = joi.object({
         employeeId: joi
                 .number()
                 .required(),
-        cardtype : joi
+        type : joi
                 .string()
                 .valid('groceries', 'restaurants', 'transport', 'education', 'health')
                 .required()
