@@ -2,6 +2,8 @@ import { faker } from "@faker-js/faker";
 import dayjs from "dayjs";
 import Cryptr from "cryptr";
 import dotenv from "dotenv";
+import bcrypt from "bcrypt";
+import {number} from "joi";
 
 import * as cardRepository from "../repositories/cardRepository.js"
 import { Employee } from "../repositories/employeeRepository.js";
@@ -13,7 +15,7 @@ export async function createCard(
     type: cardRepository.TransactionTypes
     ) {
     
-    await checkCardTypeExists(type, employee.id)
+    await checkCardExists(type, employee.id)
 
     const cardNumber: string = faker.finance.creditCardNumber("#### #### #### ####");
     const cardholderName: string = cardHolderFormart(employee.fullName);
@@ -32,9 +34,11 @@ export async function createCard(
     };
 
     await cardRepository.insert(card);
+
+    return cvc;
 }
 
-export async function checkCardTypeExists(
+export async function checkCardExists(
     type:cardRepository.TransactionTypes,
     employeeId: number
     ) {
@@ -76,10 +80,73 @@ function createExpirationDate(){
 
 function createCVC() {
     const cvc = faker.finance.creditCardCVV();
+    console.log(cvc)
 
-    const cryptr = new Cryptr(process.env.CRYPT_SECRET);
+    const cryptr = new Cryptr(process.env.CRYPTR_SECRET);
     
     const securityCode = cryptr.encrypt(cvc);
 
     return { cvc, securityCode }
+}
+
+export async function activateCard(cardId: number, password : string, cvc: string) {
+
+    const cardData = await cardRepository.findById(cardId);
+
+    if(!cardData){
+        throw {
+            type: "notFound",
+            message: "Card not found"
+        };
+    }
+
+    checkActivate(cardData.password, false);
+    checkExpired(cardData.expirationDate);
+    validateCvc(cvc, cardData.securityCode);
+
+    const hash = bcrypt.hashSync(password, 10);
+
+    await cardRepository.update(cardId, {password : hash});
+    
+}
+
+function checkActivate(password: string | null, active: boolean) {
+    if (password !== null && !active) {
+        throw {
+            type: "badRequest",
+            message: "Card is already active",
+        };
+    } else if (password === null && active) {
+        throw {
+            type: "unauthorized",
+            message: "Card is not active",
+        };
+    }
+
+}
+
+function checkExpired(expirationDate: string) {
+    const date = expirationDate.split("/");
+    const formatDate = dayjs().set("date", 1)
+        .set("month", parseInt(date[0])).set("year", parseInt(date[1]))
+        .format("DD/MM/YYYY");
+    if (new Date() > new Date(formatDate)) {
+        throw {
+            type: "badRequest",
+            message: "Expired card",
+        };
+    }
+}
+
+function validateCvc(cvcInserted: string, encryptedCvc: string) {
+    const cryptr = new Cryptr(process.env.CRYPTR_SECRET);
+    const decryptedCvc = cryptr.decrypt(encryptedCvc);
+    console.log(decryptedCvc)
+
+    if (cvcInserted !== decryptedCvc) {
+        throw {
+            type: "unauthorized",
+            message: "Invalid cvc",
+        };
+    }
 }

@@ -9,4 +9,9 @@ export const createCardSchema = joi.object({
                 .valid('groceries', 'restaurants', 'transport', 'education', 'health')
                 .required()
 
-})
+});
+
+export const activateCardSchema = joi.object({
+    cvc: joi.string().length(3).required(),
+    password: joi.string().length(4).pattern(/[0-9]{4}/).required()
+});
