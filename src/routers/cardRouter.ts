@@ -21,4 +21,10 @@ cardRouter.patch(
     cardController.activateCard
 );
 
-cardRouter.get("/transactions/:cardId", cardController.getTransactions); 
+cardRouter.get("/transactions/:cardId", cardController.getTransactions);
+
+cardRouter.patch(
+    "/cards/:cardId/block",
+    validateSchema(cardSchema.blockCardSchema),
+    cardController.blockCard
+);

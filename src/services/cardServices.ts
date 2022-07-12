@@ -92,14 +92,8 @@ function createCVC() {
 
 export async function activateCard(cardId: number, password : string, cvc: string) {
 
-    const cardData = await cardRepository.findById(cardId);
-
-    if(!cardData){
-        throw {
-            type: "notFound",
-            message: "Card not found"
-        };
-    }
+    
+    const cardData = await getCardData(cardId);
 
     checkActivate(cardData.password, false);
     checkExpired(cardData.expirationDate);
@@ -109,6 +103,19 @@ export async function activateCard(cardId: number, password : string, cvc: strin
 
     await cardRepository.update(cardId, {password : hash});
     
+}
+
+async function getCardData(cardId: number){
+    const cardData = await cardRepository.findById(cardId);
+
+    if(!cardData){
+        throw {
+            type: "notFound",
+            message: "Card not found"
+        };
+    }
+
+    return cardData;
 }
 
 function checkActivate(password: string | null, active: boolean) {
@@ -155,14 +162,7 @@ function validateCvc(cvcInserted: string, encryptedCvc: string) {
 }
 
 export async function getTransactions(cardId: number) {
-    const cardData = await cardRepository.findById(cardId);
-
-    if (!cardData) {
-        throw {
-            type: "notFound",
-            message: "Card not found",
-        };
-    }
+    const cardData = await getCardData(cardId);
 
     const payments = await paymentRepository.findByCardId(cardId);
     const recharges = await rechargeRepository.findByCardId(cardId);
@@ -195,4 +195,37 @@ function calculateBalance(
     const balance = rechargesTotal - paymentsTotal;
 
     return balance;
+}
+
+export async function blockCard(cardId: number, password: string) {
+    const cardData = await getCardData(cardId);
+
+    validatePassword(password, cardData.password);
+    checkExpired(cardData.expirationDate);
+    checkBlocked(cardData.isBlocked, false);
+
+    await cardRepository.update(cardId, { isBlocked: true });
+}
+
+function checkBlocked(isBlocked: boolean, blocked: boolean) {
+    if (isBlocked && !blocked) {
+        throw {
+            type: "badRequest",
+            message: "Card is blocked",
+        };
+    } else if (!isBlocked && blocked) {
+        throw {
+            type: "badRequest",
+            message: "Card is not blocked",
+        };
+    }
+}
+
+function validatePassword(password: string, passwordHash: string) {
+    if (!bcrypt.compareSync(password, passwordHash)) {
+        throw {
+            type: "unauthorized",
+            message: "Invalid password",
+        };
+    }
 }
